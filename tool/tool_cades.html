@@ -10,14 +10,27 @@
 <title>CAdES Generator</title>
 <script language="JavaScript" type="text/javascript" src="../jsrsasign-all-min.js"></script>
 <script language="JavaScript" type="text/javascript">
-var param = {
-    content: {str: ""},
-    signerInfos: [{
-      hashAlg: 'sha256',
-      sAttr: {
-      },
-      sigAlg: 'SHA256withRSA'
-    }]
+const initParam = {
+  version: 1,
+  hashalgs: ["sha1", "sha256", "sha512"],
+  econtent: {
+    type: "data",
+    content: {str: ""}
+  },
+  sinfos: [{
+    version: 1,
+    id: {type:'isssn', cert: ""},
+    hashalg: "sha256",
+    sattrs: {
+      array:[
+        {
+          attr: "contentType",
+          type: "data"
+        }
+      ]
+    },
+    sigalg: "SHA256withRSA",
+  }]
 };
 
 var parsedInfo = null;
@@ -26,35 +39,60 @@ function doIt() {
   var f1 = document.form1;
 
   f1.newcms1.value = "signing ...";
+  const param = {...initParam};
 
   var prvKeyPEM = f1.prvkey1.value;
   var certPEM = f1.cert1.value;
 
-  param.signerInfos[0].signerCert = certPEM;
-  param.signerInfos[0].signerPrvKey = prvKeyPEM;
+  param.sinfos[0].id.cert = certPEM;
   param.certs = [certPEM];
+  param.sinfos[0].signkey = prvKeyPEM;
 
-  param.content.str = f1.content1.value;
+  param.econtent.content.str = f1.content1.value;
+  param.sinfos[0].sattrs.array.push({
+    attr: "messageDigest",
+    hex: KJUR.crypto.Util.hashString(f1.content1.value, f1.attr_sigpol_hashalg.value),
+  });
+  param.sinfos[0].hashalg = f1.attr_sigpol_hashalg.value;
+  if (f1.attr_sigpol_hashalg.value === "sha1")
+    param.sinfos[0].sigalg = "SHA1withRSA";
+  if (f1.attr_sigpol_hashalg.value === "sha256")
+    param.sinfos[0].sigalg = "SHA256withRSA";
+  if (f1.attr_sigpol_hashalg.value === "sha512")
+    param.sinfos[0].sigalg = "SHA512withRSA";
   if (f1.attr_sigtime.checked)
-    param.signerInfos[0].sAttr.SigningTime = {};
+    param.sinfos[0].sattrs.array.push({
+      attr: "signingTime",
+      str: "",
+    });
+    
   if (f1.attr_sigcertv1.checked)
-    param.signerInfos[0].sAttr.SigningCertificate = {array: [certPEM]};
+    param.sinfos[0].sattrs.array.push({
+      attr: "signingCertificate",
+      array: [certPEM]
+    });
   if (f1.attr_sigcertv2.checked)
-    param.signerInfos[0].sAttr.SigningCertificateV2 = {array: [certPEM]};
+    param.sinfos[0].sattrs.array.push({
+      attr: "signingCertificateV2",
+      array: [certPEM]
+    });
   if (f1.attr_sigpol_flag.checked) {
-    param.signerInfos[0].sAttr.SignaturePolicyIdentifier = {
+    param.sinfos[0].sattrs.array.push({
+      attr: "signaturePolicyIdentifier",
       oid: f1.attr_sigpol_oid.value,
-      hash: {
-        alg: f1.attr_sigpol_hashalg.value,
-        hash: f1.attr_sigpol_hash.value
-      }      
-    };
+      alg: f1.attr_sigpol_hashalg.value,
+      hash: KJUR.crypto.Util.hashString(f1.content1.value, f1.attr_sigpol_hashalg.value)
+    });
   }
 
   try {
-    var sd = KJUR.asn1.cms.CMSUtil.newSignedData(param);
+    var sd = new KJUR.asn1.cms.SignedData(param);
     //f1.newcms1.value = sd.getPEM();
     f1.newcms1.value = sd.getContentInfoEncodedHex();
+    f1.newcms3.value = JSON.stringify(KJUR.asn1.cms.CMSUtil.verifySignedData({cms: f1.newcms1.value}), null, 2);
+    const parser = new KJUR.asn1.cms.CMSParser();
+    // console.warn(JSON.stringify(parser.getCMSSignedData(f1.newcms1.value), null, 2));
+    f1.newcms2.value = JSON.stringify(parser.getCMSSignedData(f1.newcms1.value), null, 2);
   } catch (ex) {
     f1.newcms1.value = "Error: " + ex;
   }
@@ -281,14 +319,7 @@ hash alg:
 <option value="sha1">SHA-1
 <option value="sha256">SHA-256
 <option value="sha512">SHA-512
-<option value="sha384">SHA-384
-<option value="sha224">SHA-224
-<option value="md5">MD5
-<option value="ripemd160">RIPEMD160
 </select>
-<br/>
-hash value: 
-<input type="text" name="attr_sigpol_hash" value="a1a2a3a4a5a6a7a8a9a0a1a2a3a4a5a6a7a8a9a0" size="40"/>
 </td></tr>
 
 </table>
@@ -297,7 +328,11 @@ hash value:
 <input type="reset" name="reset" value="Reset"/>
 
 <h6>RESULT:</h6>
-<textarea name="newcms1" cols="65" rows="4"></textarea>
+<textarea name="newcms1" cols="65" rows="8"></textarea>
+<h6>VALIDATION:</h6>
+<textarea name="newcms3" cols="65" rows="8"></textarea>
+<h6>Result in JSON</h6>
+<textarea name="newcms2" cols="120" rows="30"></textarea>
 
 <h4>(Step2)Parse CAdES-BES/EPES for adding SigTS</h4>
 Parse above CAdES-BES/EPES signature and
