@@ -33,12 +33,12 @@ function doIt() {
         attr: "contentType",
         type: "data"
       },{
-      attr: "signingTime",
-      str: '131231235959Z'
-    },{
-      attr: "messageDigest",
-      hex: KJUR.crypto.Util.sha256(f1.content1.value),
-    }]},
+        attr: "signingTime",
+        str: '131231235959Z'
+      },{
+        attr: "messageDigest",
+        hex: KJUR.crypto.Util.sha256(f1.content1.value),
+      }]},
       sigalg: "SHA256withRSA",
       signkey: prvKeyPEM
     }]
@@ -51,6 +51,8 @@ function doIt() {
   try {
     var sd = new KJUR.asn1.cms.SignedData(param);
     f1.newcms1.value = sd.getContentInfoEncodedHex();
+    f1.newcms3.value = KJUR.asn1.ASN1Util.getPEMStringFromHex(f1.newcms1.value, "CMS");
+    f1.newcms4.value = pemtohex(f1.newcms3.value, "CMS");
     const parser = new KJUR.asn1.cms.CMSParser();
     // console.warn(JSON.stringify(parser.getCMSSignedData(f1.newcms1.value), null, 2));
     f1.newcms2.value = JSON.stringify(parser.getCMSSignedData(f1.newcms1.value), null, 2);
@@ -187,10 +189,16 @@ q0gq
 <input type="reset" name="reset" value="Reset"/>
 
 <h2>Generated CMS SignedData</h2>
-<textarea name="newcms1" cols="150" rows="8"></textarea>
+<textarea name="newcms1" cols="65" rows="8"></textarea>
+
+<h2>Generated CMS PEM SignedData</h2>
+<textarea name="newcms3" cols="65" rows="8"></textarea>
+
+<h2>Parsed Hex CMS SignedData from PEM</h2>
+<textarea name="newcms4" cols="65" rows="8"></textarea>
 
 <h2>Generated CMS SignedData in JSON</h2>
-<textarea name="newcms2" cols="150" rows="50"></textarea>
+<textarea name="newcms2" cols="65" rows="50"></textarea>
 
 <br/>
 This HEX formatted CMS signed data can be verified by OpenSSL command

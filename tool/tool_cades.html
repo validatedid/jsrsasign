@@ -87,8 +87,8 @@ function doIt() {
 
   try {
     var sd = new KJUR.asn1.cms.SignedData(param);
-    //f1.newcms1.value = sd.getPEM();
     f1.newcms1.value = sd.getContentInfoEncodedHex();
+    f1.newcms4.value = KJUR.asn1.ASN1Util.getPEMStringFromHex(f1.newcms1.value, "CMS");
     f1.newcms3.value = JSON.stringify(KJUR.asn1.cms.CMSUtil.verifySignedData({cms: f1.newcms1.value}), null, 2);
     const parser = new KJUR.asn1.cms.CMSParser();
     // console.warn(JSON.stringify(parser.getCMSSignedData(f1.newcms1.value), null, 2));
@@ -329,6 +329,8 @@ hash alg:
 
 <h6>RESULT:</h6>
 <textarea name="newcms1" cols="65" rows="8"></textarea>
+<h6>CADES PEM SignedData</h6>
+<textarea name="newcms4" cols="65" rows="8"></textarea>
 <h6>VALIDATION:</h6>
 <textarea name="newcms3" cols="65" rows="8"></textarea>
 <h6>Result in JSON</h6>
